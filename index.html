@@ -289,9 +289,16 @@ body { font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif; b
     <!-- 성공 후 표시 -->
     <div id="ghSuccessBox" class="hidden">
       <div class="success-box">
-        <div class="success-box-title">✅ 연동 완료! 아래 URL을 팀원에게 공유하세요</div>
+        <div class="success-box-title">✅ 연동 완료!</div>
+        <div style="font-size:12px;font-weight:700;color:#15803D;margin-bottom:4px">🔗 공유 URL (팀원에게 전달)</div>
         <div class="url-display" id="shareUrlDisplay"></div>
         <button class="btn-copy-url" onclick="copyShareUrl()">🔗 URL 복사</button>
+        <div id="groupCodeSection" style="margin-top:12px;padding-top:12px;border-top:1px solid #BBF7D0">
+          <div style="font-size:12px;font-weight:700;color:#15803D;margin-bottom:4px">🔑 그룹 접속 코드 (팀원에게 전달)</div>
+          <div class="url-display" id="groupCodeDisplay" style="word-break:break-all"></div>
+          <button class="btn-copy-url" onclick="copyGroupCode()" style="margin-top:6px">🔑 코드 복사</button>
+          <div style="font-size:11px;color:#6B7280;margin-top:6px;line-height:1.5">팀원이 그룹 참여 시 이 코드를 입력해야 진도를 저장할 수 있어요.</div>
+        </div>
       </div>
       <button class="btn-primary" onclick="closeGhModal()">완료</button>
       <button class="btn-cancel" onclick="disconnectGh()">연동 해제</button>
@@ -299,28 +306,28 @@ body { font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif; b
 
     <!-- 설정 폼 -->
     <div id="ghSetupForm">
-      <div class="info-box">
-        💡 GitHub PAT(Personal Access Token)이 필요합니다.<br>
-        <strong>Settings → Developer settings → Personal access tokens → Tokens (classic)</strong><br>
-        권한: <strong>gist</strong> 체크만 하면 됩니다.
-      </div>
-
-      <div class="field-label">
-        GitHub Token
-        <a href="https://github.com/settings/tokens/new?scopes=gist&description=study-dashboard" target="_blank">토큰 만들기 →</a>
-      </div>
-      <input class="field-input mono" type="password" id="ghTokenInput" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
-
       <div class="gh-tabs">
         <div class="gh-tab active" id="ghTab-new" onclick="setGhTab('new')">새 스터디 그룹 만들기</div>
         <div class="gh-tab" id="ghTab-join" onclick="setGhTab('join')">기존 그룹 참여하기</div>
       </div>
 
       <div id="ghPane-new">
+        <div class="info-box">
+          💡 <strong>그룹 관리자 전용</strong>입니다.<br>
+          GitHub Token(gist 권한)으로 공유 저장소를 생성합니다.<br>
+          <a href="https://github.com/settings/tokens/new?scopes=gist&description=study-dashboard" target="_blank" style="color:#1D4ED8;font-weight:600">토큰 만들기 →</a>
+        </div>
+        <div class="field-label">GitHub Token</div>
+        <input class="field-input mono" type="password" id="ghTokenNew" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
         <button class="btn-primary" id="btnCreateGist" onclick="createGist()">🚀 새 스터디 그룹 만들기</button>
       </div>
 
       <div id="ghPane-join" class="hidden">
+        <div class="info-box">
+          📥 관리자에게 <strong>그룹 접속 코드</strong>와 <strong>공유 URL</strong>을 받아서 입력하세요.
+        </div>
+        <div class="field-label">그룹 접속 코드 (관리자에게 받은 코드)</div>
+        <input class="field-input mono" type="password" id="ghTokenJoin" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
         <div class="field-label">팀원이 공유한 URL 또는 Gist ID</div>
         <input class="field-input mono" id="ghGistInput" placeholder="https://...?gist=abc123  또는  abc123">
         <button class="btn-primary" id="btnJoinGist" onclick="joinGist()">📥 그룹 참여하기</button>
@@ -494,7 +501,7 @@ function applyGistData(data) {
 async function gistCreate() {
   const data = await ghRequest('POST', '/gists', {
     description: '클로드 코드 스터디 현황판 — 8주 스터디',
-    public: false,
+    public: true,
     files: {[GIST_FILE]: {content: JSON.stringify(buildGistPayload(), null, 2)}}
   });
   return data.id;
@@ -514,9 +521,19 @@ async function gistRead(id) {
 }
 
 async function gistWrite() {
-  if (!S.gistId || !S.token) return;
+  if (!S.gistId || !S.token || S.me === null) return;
+  // Read current Gist state first, then only update own slot (prevents overwriting others)
+  let current;
+  try { current = await gistRead(S.gistId); } catch(e) {
+    current = { version:2, updatedAt:'', members: S.members.map(m=>({name:m.name,completed:[...m.completed]})) };
+  }
+  if (!current.members) current.members = [];
+  while (current.members.length <= S.me) current.members.push({name:'',completed:[]});
+  current.members[S.me] = { name: S.members[S.me].name, completed: [...S.members[S.me].completed] };
+  current.updatedAt = new Date().toISOString();
+  current.version = 2;
   await ghRequest('PATCH', `/gists/${S.gistId}`, {
-    files: {[GIST_FILE]: {content: JSON.stringify(buildGistPayload(), null, 2)}}
+    files: {[GIST_FILE]: {content: JSON.stringify(current, null, 2)}}
   });
 }
 
@@ -611,15 +628,21 @@ function openGhModal() {
   const form = document.getElementById('ghSetupForm');
   const success = document.getElementById('ghSuccessBox');
   if (S.gistId && S.token) {
-    // already connected → show success box
     form.classList.add('hidden');
     success.classList.remove('hidden');
     document.getElementById('shareUrlDisplay').textContent = buildShareUrl(S.gistId);
+    document.getElementById('groupCodeDisplay').textContent = S.token;
+    document.getElementById('groupCodeSection').style.display = '';
   } else {
     form.classList.remove('hidden');
     success.classList.add('hidden');
-    // pre-fill token if saved
-    if (S.token) document.getElementById('ghTokenInput').value = S.token;
+    // If URL already has a gist param → auto-switch to join tab and pre-fill URL
+    const urlGistId = readUrlGistId();
+    if (urlGistId) {
+      setGhTab('join');
+      document.getElementById('ghGistInput').value = buildShareUrl(urlGistId);
+    }
+    if (S.token) document.getElementById('ghTokenJoin').value = S.token;
   }
   document.getElementById('ghModal').classList.remove('hidden');
 }
@@ -635,7 +658,7 @@ function setGhTab(t) {
 }
 
 async function createGist() {
-  const token = document.getElementById('ghTokenInput').value.trim();
+  const token = document.getElementById('ghTokenNew').value.trim();
   if (!token) { toast('GitHub Token을 입력해주세요'); return; }
   const btn = document.getElementById('btnCreateGist');
   btn.disabled = true; btn.textContent = '생성 중...';
@@ -646,10 +669,11 @@ async function createGist() {
     pushUrlGistId(id);
     startAutoSync();
     setSyncStatus('ok');
-    // show success
     document.getElementById('ghSetupForm').classList.add('hidden');
     document.getElementById('ghSuccessBox').classList.remove('hidden');
     document.getElementById('shareUrlDisplay').textContent = buildShareUrl(id);
+    document.getElementById('groupCodeDisplay').textContent = token;
+    document.getElementById('groupCodeSection').style.display = '';
     document.getElementById('setupBanner').classList.add('hidden');
     toast('🎉 스터디 그룹이 생성되었습니다!');
   } catch(e) {
@@ -661,16 +685,16 @@ async function createGist() {
 }
 
 async function joinGist() {
-  const token = document.getElementById('ghTokenInput').value.trim();
+  const token = document.getElementById('ghTokenJoin').value.trim();
   const raw = document.getElementById('ghGistInput').value.trim();
   if (!raw) { toast('Gist ID 또는 URL을 입력해주세요'); return; }
-  // extract gist id from url or raw id
+  if (!token) { toast('그룹 접속 코드를 입력해주세요 (관리자에게 받은 코드)'); return; }
   let id = raw;
   const m = raw.match(/[?&]gist=([a-f0-9]+)/i) || raw.match(/gists\/([a-f0-9]+)/i) || raw.match(/^([a-f0-9]{20,})$/i);
   if (m) id = m[1];
   const btn = document.getElementById('btnJoinGist');
   btn.disabled = true; btn.textContent = '참여 중...';
-  if (token) saveToken(token);
+  saveToken(token);
   try {
     const data = await gistRead(id);
     applyGistData(data);
@@ -684,10 +708,12 @@ async function joinGist() {
     document.getElementById('ghSetupForm').classList.add('hidden');
     document.getElementById('ghSuccessBox').classList.remove('hidden');
     document.getElementById('shareUrlDisplay').textContent = buildShareUrl(id);
+    document.getElementById('groupCodeSection').style.display = 'none'; // 팀원은 코드 재공유 불필요
     document.getElementById('setupBanner').classList.add('hidden');
     toast('✅ 스터디 그룹에 참여했습니다!');
   } catch(e) {
     toast('❌ 참여 실패: ' + e.message);
+    saveToken(null);
   } finally {
     btn.disabled = false; btn.textContent = '📥 그룹 참여하기';
   }
@@ -712,6 +738,17 @@ function copyShareUrl() {
     ta.value = url; document.body.appendChild(ta); ta.select();
     document.execCommand('copy'); document.body.removeChild(ta);
     toast('🔗 URL 복사 완료!');
+  });
+}
+
+function copyGroupCode() {
+  const code = S.token || '';
+  if (!code) { toast('그룹 접속 코드가 없습니다. 재연동해주세요.'); return; }
+  navigator.clipboard.writeText(code).then(() => toast('🔑 그룹 접속 코드 복사 완료!')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = code; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    toast('🔑 그룹 접속 코드 복사 완료!');
   });
 }
 
