@@ -837,6 +837,11 @@ function goToCurriculum(i) { S.curViewMember=i; switchView('cur', i); }
 // CURRICULUM
 // ═══════════════════════════════════════════
 function renderCurriculum(idx) {
+  // 재렌더링 전에 현재 열린 주차 저장
+  const openWeeks = new Set();
+  document.querySelectorAll('#weekList .wcard').forEach((el, wi) => {
+    if (el.classList.contains('open')) openWeeks.add(wi);
+  });
   S.curViewMember=idx;
   const m=S.members[idx], cfg=MCONF[idx], isMe=S.me===idx;
   document.getElementById('curTitle').textContent = m.name+'의 학습 기록';
@@ -867,7 +872,7 @@ function renderCurriculum(idx) {
         <div class="imeta"></div>
       </div>`;
     }).join('');
-    return `<div class="wcard${wi===0?' open':''}" id="wk-${wi}">
+    return `<div class="wcard" id="wk-${wi}">
       <div class="wcard-hdr" onclick="toggleWeek(${wi})">
         <div class="wcard-num" style="background:${w.light};color:${w.color}">${wi+1}주차</div>
         <div class="wcard-meta"><div class="wcard-title">${w.title}</div><div class="wcard-sub">${w.goal}</div></div>
@@ -883,6 +888,12 @@ function renderCurriculum(idx) {
       </div>
     </div>`;
   }).join('');
+
+  // 열린 상태 복원 (처음 렌더링이면 1주차만 기본 열기)
+  const toOpen = openWeeks.size > 0 ? openWeeks : new Set([0]);
+  document.querySelectorAll('#weekList .wcard').forEach((el, wi) => {
+    if (toOpen.has(wi)) el.classList.add('open');
+  });
 }
 
 function toggleWeek(wi) { document.getElementById(`wk-${wi}`).classList.toggle('open'); }
