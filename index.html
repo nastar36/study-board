@@ -482,11 +482,12 @@ function buildGistPayload() {
 
 function applyGistData(data) {
   if (!data || !data.members) return;
-  data.members.forEach((m,i) => {
-    if (i < S.members.length) {
-      S.members[i].name = m.name || MCONF[i].dname;
-      S.members[i].completed = m.completed || [];
-    }
+  data.members.forEach((m, i) => {
+    if (i >= S.members.length) return;
+    // 내 슬롯은 절대 Gist로 덮어쓰지 않음 — localStorage가 항상 우선
+    if (S.me !== null && i === S.me) return;
+    S.members[i].name = m.name || MCONF[i].dname;
+    S.members[i].completed = m.completed || [];
   });
 }
 
