@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>클로드 코드 스터디 현황판</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #F0F2F7; --surface: #fff; --border: #E5E7EB;
+  --text: #111827; --text2: #6B7280; --text3: #9CA3AF;
+  --radius: 14px;
+  --sh: 0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04);
+  --sh-md: 0 4px 16px rgba(0,0,0,0.08);
+}
+body { font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; font-size:14px; }
+
+/* HEADER */
+.hdr { background:#fff; border-bottom:1px solid var(--border); padding:0 24px; height:56px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+.hdr-brand { display:flex; align-items:center; gap:10px; }
+.hdr-brand-icon { font-size:22px; }
+.hdr-brand-name { font-size:15px; font-weight:700; }
+.hdr-brand-sub { font-size:11px; color:var(--text2); }
+.hdr-actions { display:flex; align-items:center; gap:8px; }
+
+.sync-btn { display:flex; align-items:center; gap:6px; padding:7px 13px; border-radius:8px; border:1.5px solid var(--border); background:#fff; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap; }
+.sync-btn:hover { background:#F9FAFB; }
+.sync-btn.connected { border-color:#059669; color:#059669; background:#F0FDF4; }
+.sync-btn.syncing { border-color:#2563EB; color:#2563EB; background:#EFF6FF; }
+.sync-btn.error { border-color:#DC2626; color:#DC2626; background:#FEF2F2; }
+
+.btn-gh { display:flex; align-items:center; gap:6px; padding:7px 14px; border-radius:8px; border:1.5px solid #7C3AED; background:#7C3AED; color:#fff; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .15s; }
+.btn-gh:hover { background:#6D28D9; }
+
+.btn-member-hdr { display:flex; align-items:center; gap:7px; padding:7px 14px; border-radius:20px; border:1.5px solid var(--border); background:#fff; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; transition:all .15s; }
+.btn-member-hdr:hover { border-color:#7C3AED; background:#F5F3FF; color:#7C3AED; }
+
+/* NAV */
+.nav { background:#fff; border-bottom:1px solid var(--border); padding:0 24px; display:flex; }
+.nav-item { padding:13px 18px; font-size:13.5px; font-weight:500; color:var(--text2); cursor:pointer; border-bottom:2.5px solid transparent; transition:all .15s; user-select:none; display:flex; align-items:center; gap:6px; }
+.nav-item:hover { color:var(--text); }
+.nav-item.active { color:#7C3AED; border-bottom-color:#7C3AED; font-weight:700; }
+
+/* LAYOUT */
+.page { max-width:1140px; margin:0 auto; padding:28px 24px; }
+.view { display:none; }
+.view.active { display:block; animation:fadeUp .25s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+.sec-hdr { margin-bottom:20px; }
+.sec-title { font-size:19px; font-weight:700; margin-bottom:3px; }
+.sec-sub { font-size:13px; color:var(--text2); }
+
+/* SETUP BANNER */
+.setup-banner { display:flex; align-items:center; justify-content:space-between; background:#F5F3FF; border:1.5px solid #7C3AED; border-radius:12px; padding:14px 18px; margin-bottom:20px; }
+.setup-banner-text { font-size:13.5px; color:#5B21B6; font-weight:600; }
+.setup-banner-sub { font-size:12px; color:#6D28D9; margin-top:2px; }
+.btn-setup-now { padding:8px 16px; border-radius:8px; border:none; background:#7C3AED; color:#fff; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; }
+.btn-setup-now:hover { background:#6D28D9; }
+
+/* STATS */
+.stats-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+.stat-tile { background:#fff; border-radius:12px; padding:16px 18px; box-shadow:var(--sh); }
+.stat-val { font-size:30px; font-weight:700; line-height:1; margin-bottom:4px; }
+.stat-lbl { font-size:12px; color:var(--text2); }
+
+/* MEMBER CARDS */
+.members-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:28px; }
+.mc { background:#fff; border-radius:var(--radius); padding:18px 14px 16px; box-shadow:var(--sh); border:2px solid transparent; cursor:pointer; transition:all .2s; position:relative; overflow:hidden; }
+.mc::before { content:''; position:absolute; top:0;left:0;right:0; height:3px; background:var(--c,#7C3AED); opacity:0; transition:opacity .2s; }
+.mc:hover { transform:translateY(-2px); box-shadow:var(--sh-md); }
+.mc.is-me { border-color:var(--c,#7C3AED); }
+.mc.is-me::before { opacity:1; }
+.mc-avatar { width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:11px; }
+.mc-name-row { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
+.mc-name { font-size:14px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+.me-chip { font-size:9px; padding:2px 5px; border-radius:4px; font-weight:700; flex-shrink:0; background:var(--c,#7C3AED); color:#fff; }
+.mc-week { font-size:12px; color:var(--text2); margin-bottom:12px; }
+.pbar { height:6px; background:#F3F4F6; border-radius:100px; overflow:hidden; margin-bottom:5px; }
+.pbar-fill { height:100%; border-radius:100px; transition:width .5s cubic-bezier(.4,0,.2,1); }
+.pmeta { display:flex; justify-content:space-between; align-items:center; }
+.ppct { font-size:13px; font-weight:700; }
+.pcnt { font-size:11px; color:var(--text2); }
+.wk-mini { display:flex; gap:3px; margin-top:10px; }
+.wk-mini-bar { flex:1; height:4px; border-radius:2px; background:#F3F4F6; overflow:hidden; }
+.wk-mini-fill { height:100%; border-radius:2px; transition:width .5s; }
+
+/* RANKING */
+.rank-list { background:#fff; border-radius:var(--radius); overflow:hidden; box-shadow:var(--sh); margin-bottom:28px; }
+.rank-item { display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--border); transition:background .12s; cursor:pointer; }
+.rank-item:last-child { border-bottom:none; }
+.rank-item:hover { background:#FAFAFA; }
+.rank-num { font-size:14px; font-weight:700; width:22px; text-align:center; color:var(--text2); }
+.rank-num.r1{color:#F59E0B} .rank-num.r2{color:#9CA3AF} .rank-num.r3{color:#D97706}
+.rank-avatar { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+.rank-info { flex:1; min-width:0; }
+.rank-name { font-size:13.5px; font-weight:600; margin-bottom:3px; display:flex; align-items:center; gap:6px; }
+.rank-bar-wrap { display:flex; align-items:center; gap:10px; }
+.rank-bar { flex:1; max-width:280px; height:5px; background:#F3F4F6; border-radius:100px; overflow:hidden; }
+.rank-bar-fill { height:100%; border-radius:100px; transition:width .5s; }
+.rank-pct { font-size:14px; font-weight:700; min-width:38px; text-align:right; }
+.rank-sec { font-size:11px; color:var(--text2); }
+
+/* CURRICULUM */
+.cur-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.mtabs { display:flex; gap:6px; flex-wrap:wrap; }
+.mtab { display:flex; align-items:center; gap:6px; padding:7px 13px; border-radius:8px; border:1.5px solid var(--border); background:#fff; font-size:12.5px; font-weight:500; cursor:pointer; transition:all .15s; color:var(--text2); }
+.mtab:hover { border-color:#9CA3AF; color:var(--text); }
+.mtab.active { border-color:var(--c,#7C3AED); background:var(--l,#EDE9FE); color:var(--c,#7C3AED); font-weight:700; }
+
+/* WEEK CARDS */
+.wcard { background:#fff; border-radius:var(--radius); margin-bottom:10px; overflow:hidden; box-shadow:var(--sh); }
+.wcard-hdr { padding:16px 20px 12px; display:flex; align-items:center; gap:12px; cursor:pointer; user-select:none; }
+.wcard-num { padding:4px 10px; border-radius:7px; font-size:11px; font-weight:700; white-space:nowrap; }
+.wcard-meta { flex:1; min-width:0; }
+.wcard-title { font-size:14.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:2px; }
+.wcard-sub { font-size:12px; color:var(--text2); }
+.wcard-right { flex-shrink:0; text-align:right; }
+.wcard-done { font-size:13px; font-weight:700; }
+.wcard-time { font-size:11px; color:var(--text2); }
+.wcard-chevron { font-size:11px; color:var(--text3); transition:transform .2s; }
+.wcard.open .wcard-chevron { transform:rotate(180deg); }
+.wcard-strip { height:3px; background:#F3F4F6; }
+.wcard-strip-fill { height:100%; transition:width .4s; }
+.wcard-body { display:none; border-top:1px solid var(--border); padding-bottom:8px; }
+.wcard.open .wcard-body { display:block; }
+
+.item-grp-lbl { padding:10px 20px 2px; font-size:10.5px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.07em; }
+.irow { display:flex; align-items:center; gap:9px; padding:8px 20px; cursor:pointer; transition:background .12s; }
+.irow:hover { background:#FAFAFA; }
+.irow.readonly { cursor:default; }
+.irow.readonly:hover { background:transparent; }
+.irow.done .ilabel { text-decoration:line-through; color:var(--text3); }
+
+.chk { width:19px; height:19px; border-radius:6px; border:2px solid #D1D5DB; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; cursor:pointer; }
+.chk.on { background:var(--c,#7C3AED); border-color:var(--c,#7C3AED); }
+.chk.on::after { content:''; width:5px; height:9px; border:2px solid #fff; border-top:none; border-left:none; transform:rotate(45deg) translateY(-1px); }
+.chk.readonly-on { background:#E5E7EB; border-color:#E5E7EB; }
+.chk.readonly-on::after { content:''; width:5px; height:9px; border:2px solid #9CA3AF; border-top:none; border-left:none; transform:rotate(45deg) translateY(-1px); }
+
+.ichip { font-size:10px; padding:2px 7px; border-radius:5px; font-weight:700; flex-shrink:0; }
+.csec { background:#EFF6FF; color:#1D4ED8; }
+.cmis { background:#FFF7ED; color:#C2410C; }
+.ilabel { font-size:13px; flex:1; line-height:1.4; }
+.imeta { display:flex; align-items:center; gap:5px; flex-shrink:0; }
+.itime { font-size:11px; color:var(--text2); }
+.dtip { margin:4px 20px 10px; padding:9px 13px; background:#FFFBEB; border-left:3px solid #F59E0B; border-radius:0 8px 8px 0; font-size:12px; color:#78350F; line-height:1.55; }
+.result-chip { margin:6px 20px 10px; display:inline-flex; align-items:center; gap:5px; background:#F0FDF4; color:#15803D; padding:5px 11px; border-radius:7px; font-size:12px; font-weight:600; }
+
+/* MODALS */
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:200; padding:20px; backdrop-filter:blur(4px); }
+.overlay.hidden { display:none; }
+.modal { background:#fff; border-radius:20px; padding:28px; width:100%; max-width:460px; box-shadow:0 20px 60px rgba(0,0,0,0.15); max-height:90vh; overflow-y:auto; }
+.modal h2 { font-size:18px; font-weight:700; margin-bottom:6px; }
+.modal-desc { font-size:13px; color:var(--text2); margin-bottom:20px; line-height:1.5; }
+
+/* GITHUB MODAL SPECIFIC */
+.gh-tabs { display:flex; background:#F3F4F6; border-radius:10px; padding:3px; margin-bottom:20px; }
+.gh-tab { flex:1; padding:9px; border-radius:8px; font-size:13px; font-weight:600; text-align:center; cursor:pointer; color:var(--text2); transition:all .15s; }
+.gh-tab.active { background:#fff; color:#7C3AED; box-shadow:var(--sh); }
+
+.field-label { font-size:12px; font-weight:700; color:var(--text2); margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; }
+.field-label a { color:#7C3AED; text-decoration:none; font-weight:600; }
+.field-label a:hover { text-decoration:underline; }
+.field-input { width:100%; padding:11px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:13.5px; font-family:inherit; outline:none; transition:border .15s; margin-bottom:14px; }
+.field-input:focus { border-color:#7C3AED; }
+.field-input.mono { font-family:monospace; font-size:12.5px; }
+
+.btn-primary { width:100%; padding:12px; border:none; border-radius:10px; background:#7C3AED; color:#fff; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .15s; }
+.btn-primary:hover { background:#6D28D9; }
+.btn-primary:disabled { background:#C4B5FD; cursor:not-allowed; }
+.btn-cancel { width:100%; padding:11px; border:1.5px solid var(--border); border-radius:10px; background:#fff; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; transition:all .15s; margin-top:8px; }
+.btn-cancel:hover { background:#F9FAFB; }
+
+.divider { display:flex; align-items:center; gap:10px; margin:16px 0; color:var(--text3); font-size:12px; }
+.divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+.success-box { background:#F0FDF4; border:1.5px solid #BBF7D0; border-radius:12px; padding:16px; margin-bottom:16px; }
+.success-box-title { font-size:14px; font-weight:700; color:#15803D; margin-bottom:8px; }
+.url-display { background:#fff; border:1px solid #D1D5DB; border-radius:8px; padding:10px 12px; font-size:12px; font-family:monospace; word-break:break-all; color:#374151; margin-bottom:10px; user-select:all; line-height:1.6; }
+.btn-copy-url { width:100%; padding:10px; border:1.5px solid #7C3AED; border-radius:8px; background:#fff; color:#7C3AED; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .15s; }
+.btn-copy-url:hover { background:#F5F3FF; }
+
+.info-box { background:#EFF6FF; border:1px solid #BFDBFE; border-radius:10px; padding:12px 14px; font-size:12px; color:#1D4ED8; line-height:1.6; margin-bottom:14px; }
+
+/* MEMBER MODAL */
+.member-choice-list { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+.member-choice { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1.5px solid var(--border); border-radius:12px; cursor:pointer; transition:all .15s; background:#fff; }
+.member-choice:hover { border-color:var(--c,#7C3AED); background:var(--l,#EDE9FE); }
+.choice-avatar { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.choice-info { flex:1; }
+.choice-name-wrap { display:flex; align-items:center; gap:6px; margin-bottom:2px; }
+.choice-name { font-size:14px; font-weight:600; }
+.choice-prog { font-size:12px; color:var(--text2); }
+.edit-name { border:none; outline:none; font-size:14px; font-weight:600; background:transparent; width:100%; cursor:text; font-family:inherit; border-bottom:1.5px solid transparent; transition:border .15s; }
+.edit-name:focus { border-bottom-color:#7C3AED; }
+
+/* SPIN */
+@keyframes spin { to{transform:rotate(360deg)} }
+.spin { display:inline-block; animation:spin .8s linear infinite; }
+
+/* TOAST */
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(16px); background:#1F2937; color:#fff; padding:11px 20px; border-radius:10px; font-size:13.5px; font-weight:600; z-index:500; opacity:0; transition:all .3s; pointer-events:none; white-space:nowrap; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* RESPONSIVE */
+@media(max-width:960px){.members-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:640px){
+  .page{padding:14px} .members-grid{grid-template-columns:repeat(2,1fr)}
+  .stats-bar{grid-template-columns:repeat(2,1fr)} .hdr{padding:0 14px}
+  .nav{padding:0 14px} .rank-bar{max-width:120px} .mtabs{gap:4px}
+  .mtab{padding:6px 10px;font-size:12px}
+}
+.hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-brand">
+    <span class="hdr-brand-icon">🎓</span>
+    <div>
+      <div class="hdr-brand-name">클로드 코드 스터디 현황판</div>
+      <div class="hdr-brand-sub">인프런 · 짐코딩 · 8주 과정</div>
+    </div>
+  </div>
+  <div class="hdr-actions">
+    <button class="sync-btn" id="syncBtn" onclick="onSyncClick()">☁️ GitHub 연동</button>
+    <button class="btn-member-hdr" id="hdrMemberBtn" onclick="openMemberModal()">
+      <span id="hdrEmoji">👤</span>
+      <span id="hdrName">멤버 선택</span>
+    </button>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-item active" id="tab-dash" onclick="switchView('dash')">📊 전체 현황</div>
+  <div class="nav-item" id="tab-cur" onclick="switchView('cur')">📚 학습 기록</div>
+</nav>
+
+<!-- DASHBOARD VIEW -->
+<div class="page view active" id="view-dash">
+  <div id="setupBanner" class="setup-banner hidden">
+    <div>
+      <div class="setup-banner-text">☁️ GitHub로 진도를 저장하고 팀원과 실시간 공유하세요</div>
+      <div class="setup-banner-sub">GitHub Gist를 백엔드로 사용해 URL 하나로 팀원 모두가 접속합니다</div>
+    </div>
+    <button class="btn-setup-now" onclick="openGhModal()">연동하기</button>
+  </div>
+
+  <div class="sec-hdr">
+    <div class="sec-title">스터디 전체 현황 🏆</div>
+    <div class="sec-sub">5명의 학습 진도를 한눈에 확인하세요</div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-tile"><div class="stat-val" style="color:#7C3AED">51</div><div class="stat-lbl">전체 학습 항목</div></div>
+    <div class="stat-tile"><div class="stat-val" style="color:#2563EB">8</div><div class="stat-lbl">주차</div></div>
+    <div class="stat-tile"><div class="stat-val" style="color:#059669">22<span style="font-size:16px;color:#6B7280">h</span></div><div class="stat-lbl">총 강의 시간</div></div>
+    <div class="stat-tile"><div class="stat-val" style="color:#D97706" id="statAvg">0%</div><div class="stat-lbl">그룹 평균 진도</div></div>
+  </div>
+
+  <div class="members-grid" id="membersGrid"></div>
+  <div style="font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;">🏅 진도 순위</div>
+  <div class="rank-list" id="rankList"></div>
+</div>
+
+<!-- CURRICULUM VIEW -->
+<div class="page view" id="view-cur">
+  <div class="cur-top">
+    <div>
+      <div class="sec-title" id="curTitle">학습 기록</div>
+      <div class="sec-sub" id="curSub">체크박스를 클릭해서 완료된 항목을 표시하세요</div>
+    </div>
+    <div class="mtabs" id="memberTabs"></div>
+  </div>
+  <div id="weekList"></div>
+</div>
+
+<!-- GITHUB MODAL -->
+<div class="overlay hidden" id="ghModal">
+  <div class="modal">
+    <h2>☁️ GitHub 연동</h2>
+    <p class="modal-desc">GitHub Gist를 저장소로 사용합니다. 팀 전체가 같은 URL로 접속하면 진도가 실시간 공유됩니다.</p>
+
+    <!-- 성공 후 표시 -->
+    <div id="ghSuccessBox" class="hidden">
+      <div class="success-box">
+        <div class="success-box-title">✅ 연동 완료! 아래 URL을 팀원에게 공유하세요</div>
+        <div class="url-display" id="shareUrlDisplay"></div>
+        <button class="btn-copy-url" onclick="copyShareUrl()">🔗 URL 복사</button>
+      </div>
+      <button class="btn-primary" onclick="closeGhModal()">완료</button>
+      <button class="btn-cancel" onclick="disconnectGh()">연동 해제</button>
+    </div>
+
+    <!-- 설정 폼 -->
+    <div id="ghSetupForm">
+      <div class="info-box">
+        💡 GitHub PAT(Personal Access Token)이 필요합니다.<br>
+        <strong>Settings → Developer settings → Personal access tokens → Tokens (classic)</strong><br>
+        권한: <strong>gist</strong> 체크만 하면 됩니다.
+      </div>
+
+      <div class="field-label">
+        GitHub Token
+        <a href="https://github.com/settings/tokens/new?scopes=gist&description=study-dashboard" target="_blank">토큰 만들기 →</a>
+      </div>
+      <input class="field-input mono" type="password" id="ghTokenInput" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+
+      <div class="gh-tabs">
+        <div class="gh-tab active" id="ghTab-new" onclick="setGhTab('new')">새 스터디 그룹 만들기</div>
+        <div class="gh-tab" id="ghTab-join" onclick="setGhTab('join')">기존 그룹 참여하기</div>
+      </div>
+
+      <div id="ghPane-new">
+        <button class="btn-primary" id="btnCreateGist" onclick="createGist()">🚀 새 스터디 그룹 만들기</button>
+      </div>
+
+      <div id="ghPane-join" class="hidden">
+        <div class="field-label">팀원이 공유한 URL 또는 Gist ID</div>
+        <input class="field-input mono" id="ghGistInput" placeholder="https://...?gist=abc123  또는  abc123">
+        <button class="btn-primary" id="btnJoinGist" onclick="joinGist()">📥 그룹 참여하기</button>
+      </div>
+
+      <button class="btn-cancel" onclick="closeGhModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBER MODAL -->
+<div class="overlay hidden" id="memberModal">
+  <div class="modal">
+    <h2>👤 멤버 선택</h2>
+    <p class="modal-desc">내 슬롯을 선택하세요. 이름을 클릭하면 변경할 수 있어요.</p>
+    <div class="member-choice-list" id="memberChoiceList"></div>
+    <button class="btn-cancel" onclick="closeMemberModal()">닫기</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// MEMBER CONFIG
+// ═══════════════════════════════════════════
+const MCONF = [
+  {emoji:'🎨',color:'#7C3AED',light:'#EDE9FE',dname:'디자이너 1'},
+  {emoji:'🌸',color:'#DB2777',light:'#FCE7F3',dname:'디자이너 2'},
+  {emoji:'🌿',color:'#059669',light:'#D1FAE5',dname:'디자이너 3'},
+  {emoji:'⭐',color:'#D97706',light:'#FEF3C7',dname:'디자이너 4'},
+  {emoji:'💙',color:'#2563EB',light:'#DBEAFE',dname:'디자이너 5'},
+];
+
+// ═══════════════════════════════════════════
+// CURRICULUM DATA
+// ═══════════════════════════════════════════
+const WEEKS = [
+  {id:1,title:'환경 설정 & 기초 입문',goal:'클로드 코드 설치하고 첫 앱 만들어 보기',hours:'약 2시간',color:'#7C3AED',light:'#EDE9FE',result:'클로드 코드 설치 완료',
+   sections:[{id:'s1',n:1,t:'시작하기 전에',d:'오리엔테이션 · 마인드셋 · AI 모델 vs 코딩 도구',time:'1시간 1분'},{id:'s2',n:2,t:'터미널 익숙해지기',d:'',time:'13분'},{id:'s3',n:3,t:'개발환경 및 클로드 코드 설치',d:'',time:'30분'}],
+   missions:[{id:'m1',n:1,t:'터미널 익숙해지기',star:false},{id:'m2',n:2,t:'클로드 코드로 개발환경 확인하기',star:false}],tip:null},
+  {id:2,title:'클로드 코드 기본 사용 + Cursor 연동',goal:'코드 편집기와 클로드 코드를 연결해서 사용하기',hours:'약 2시간',color:'#2563EB',light:'#DBEAFE',result:'기존 프로젝트 UI 개선',
+   sections:[{id:'s4',n:4,t:'클로드 코드 맛보기 및 초기화',d:'',time:'22분'},{id:'s5',n:5,t:'Cursor AI IDE 통합',d:'',time:'43분'}],
+   missions:[{id:'m3',n:3,t:'클로드 코드로 프로젝트 분석하기',star:false},{id:'m4',n:4,t:'클로드 코드로 프로젝트 UI 개선하기',star:true}],
+   tip:'MISSION 4가 핵심! 이미지를 첨부하고 "이 디자인대로 만들어줘"로 UI 개선을 직접 체험하세요.'},
+  {id:3,title:'권한 모드 이해 + 슬래시 명령어',goal:'Plan 모드 / Auto 모드 활용, 나만의 프로필 웹사이트 완성',hours:'약 2시간 30분',color:'#059669',light:'#D1FAE5',result:'나만의 프로필 웹사이트',
+   sections:[{id:'s6',n:6,t:'클로드 코드 권한',d:'권한 모드 · 확장 사고 · 이미지로 UI 개선',time:'48분'},{id:'s7',n:7,t:'슬래시 명령어와 단축키',d:'토큰 최적화 · 출력 스타일',time:'1시간'}],
+   missions:[{id:'m5',n:5,t:'나만의 프로필 웹사이트 만들기',star:true},{id:'m6',n:6,t:'나만의 출력 스타일 만들기',star:false}],
+   tip:'디자인 시안을 캡처해서 붙여넣고 "이 디자인대로 만들어줘"가 가능합니다. Plan 모드로 AI와 단계별 협업하는 법을 익히세요.'},
+  {id:4,title:'Git 기초 + 설정·메모리 + MCP',goal:'AI에게 나를 기억시키고, 유용한 MCP 도구 연결하기',hours:'약 2시간 30분',color:'#D97706',light:'#FEF3C7',result:'AI 맞춤 설정 완료',
+   sections:[{id:'s8',n:8,t:'Git과 Github',d:'기초 + 브랜치',time:'40분'},{id:'s9',n:9,t:'설정 파일과 메모리 관리',d:'CLAUDE.md · 모듈형 규칙 · Auto Memory',time:'48분'},{id:'s10',n:10,t:'MCP 활용',d:'',time:'15분'}],
+   missions:[{id:'m7',n:7,t:'프로필 웹 Github 링크 제출하기',star:false},{id:'m8',n:8,t:'유용한 MCP Server 공유하기',star:false},{id:'m8e',n:'8+',t:'추가 미션: 설정 및 메모리 관리 실습',star:false}],
+   tip:'CLAUDE.md에 "나는 디자이너. UI/UX 중심으로 답변해줘"를 정의해두면 이후 모든 작업에 자동 적용됩니다.'},
+  {id:5,title:'모던 기술스택 이해 + Starter Kit',goal:'PRD 작성법과 AI 활용 프로젝트 생성 흐름 익히기',hours:'약 3시간',color:'#DC2626',light:'#FEE2E2',result:'개인 Starter Kit 완성',
+   sections:[{id:'s11',n:11,t:'모던 기술스택과 개발 워크플로우',d:'',time:'30분'},{id:'s12',n:12,t:'프로젝트1 - AI 활용',d:'CoT 프롬프트 엔지니어링 · UI 개선',time:'30분'},{id:'s13',n:13,t:'프로젝트1 - 공식문서',d:'Next.js · 역할 프롬프트 · 오류 해결',time:'51분'}],
+   missions:[{id:'m9',n:9,t:'클로드 코드에 나를 기억시키기',star:false},{id:'m10',n:10,t:'나만의 Starter Kit 만들기',star:false}],
+   tip:'"역할 프롬프트 엔지니어링"이 핵심입니다. AI에게 디자인 의도를 명확히 전달하는 기법을 집중 실습하세요.'},
+  {id:6,title:'고급 기능 (커맨드·서브에이전트·훅)',goal:'반복 작업 자동화, 코드 리뷰 에이전트 활용',hours:'약 2시간 30분',color:'#7C3AED',light:'#EDE9FE',result:'자동화 워크플로우 구축',
+   sections:[{id:'s14',n:14,t:'커스텀 커맨드',d:'Git 커밋 자동화 · 동적 파라미터',time:'18분'},{id:'s15',n:15,t:'서브에이전트',d:'코드 리뷰 · 컨텍스트 관리',time:'24분'},{id:'s16',n:16,t:'훅(Hooks)',d:'슬랙 알림 자동화 · Input 데이터 활용',time:'38분'},{id:'s17',n:17,t:'MCP Server 설치',d:'',time:'13분'}],
+   missions:[{id:'m11',n:11,t:'Starter Kit에 커스텀 커맨드 추가하기',star:false},{id:'m12',n:12,t:'Starter Kit에 서브에이전트 추가하기',star:false},{id:'m13',n:13,t:'Starter Kit에 훅(Hooks) 추가하기',star:false},{id:'m14',n:14,t:'Starter Kit에 MCP Server 추가하기',star:false}],
+   tip:'슬랙 알림 자동화로 팀 협업에 활용 가능합니다. 훅(Hooks) 기능을 꼭 실습해보세요.'},
+  {id:7,title:'실전 프로젝트2: Notion 기반 앱 (PRD→배포)',goal:'기획 → 로드맵 → 개발 → 배포까지 전 과정',hours:'약 3시간 30분',color:'#0891B2',light:'#CFFAFE',result:'Notion 기반 앱 배포',
+   sections:[{id:'s18',n:18,t:'프로젝트2 시작',d:'PRD 생성 · 메타프롬프트 활용',time:'34분'},{id:'s19',n:19,t:'작업 관리 도구',d:'',time:'26분'},{id:'s20',n:20,t:'로드맵(ROADMAP.md) 만들기',d:'',time:'18분'},{id:'s21',n:21,t:'Shrimp Task Manager 도입',d:'',time:'21분'},{id:'s22',n:22,t:'MVP 개발 및 배포',d:'서브에이전트 UI/UX 전문가 포함',time:'1시간 6분',star:true},{id:'s23',n:23,t:'관리자 기능 확장',d:'',time:'20분'}],
+   missions:[{id:'m15',n:15,t:'PRD 생성하기',star:false},{id:'m16',n:16,t:'로드맵 만들기',star:false},{id:'m17',n:17,t:'Task Manager 설정하기',star:false},{id:'m18',n:18,t:'MVP 개발하기',star:false},{id:'m19',n:19,t:'배포하기',star:false},{id:'m20',n:20,t:'관리자 기능 추가하기',star:false}],
+   tip:'섹션 22 "서브에이전트: UI/UX 전문가" 강의가 핵심! AI를 디자인 파트너로 활용하는 방법을 배웁니다.'},
+  {id:8,title:'심화 & 스킬·플러그인 & 실전 활용',goal:'PPT·카드뉴스 제작, Agent Teams 이해, 스킬 마켓 활용',hours:'약 4시간',color:'#9D174D',light:'#FCE7F3',result:'실무 활용 콘텐츠 제작',
+   sections:[{id:'s27',n:27,t:'클로드 스킬 & 플러그인',d:'마켓플레이스 활용',time:'1시간'},{id:'s28',n:28,t:'주제별 심화',d:'MCP Tool Search · 토큰 절약',time:'25분'},{id:'s29',n:29,t:'Agent Teams',d:'',time:'39분'},{id:'s30',n:30,t:'실전 활용 심화 ⭐',d:'PPT 만들기 · CLAUDE.md 완벽 작성 · 카드뉴스 만들기',time:'1시간 53분',star:true}],
+   missions:[{id:'m21',n:21,t:'클로드 스킬 활용 프로젝트',star:false},{id:'m22',n:22,t:'실무 콘텐츠 제작하기 (PPT or 카드뉴스)',star:false},{id:'m23',n:23,t:'최종 결과물 공유하기',star:false}],
+   tip:'PPT 만들기, 카드뉴스 만들기는 디자이너 실무에 즉시 적용 가능한 핵심 콘텐츠입니다!'},
+];
+const TOTAL = WEEKS.reduce((s,w) => s+w.sections.length+w.missions.length, 0);
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let S = {
+  me: null,
+  members: MCONF.map((c,i) => ({id:i, name:c.dname, completed:[]})),
+  curViewMember: 0,
+  token: null,   // GitHub PAT (localStorage only, never URL)
+  gistId: null,  // Gist ID (URL + localStorage)
+  syncStatus: 'idle', // idle | syncing | ok | error
+  syncTimer: null,
+  lastSyncTime: null,
+};
+
+// ═══════════════════════════════════════════
+// PERSISTENCE
+// ═══════════════════════════════════════════
+function loadLocal() {
+  try {
+    const d = JSON.parse(localStorage.getItem('claudeStudy_v2') || 'null');
+    if (!d) return;
+    if (d.me !== undefined) S.me = d.me;
+    if (d.members) d.members.forEach((m,i) => { if(S.members[i]){S.members[i].name=m.name||MCONF[i].dname;S.members[i].completed=m.completed||[];} });
+  } catch(e) {}
+  S.token = localStorage.getItem('claudeStudy_token') || null;
+  S.gistId = localStorage.getItem('claudeStudy_gistId') || null;
+}
+
+function saveLocal() {
+  try { localStorage.setItem('claudeStudy_v2', JSON.stringify({me:S.me, members:S.members.map(m=>({name:m.name,completed:m.completed}))})); } catch(e) {}
+}
+
+function saveGistId(id) {
+  S.gistId = id;
+  localStorage.setItem('claudeStudy_gistId', id);
+}
+
+function saveToken(t) {
+  S.token = t;
+  if (t) localStorage.setItem('claudeStudy_token', t);
+  else localStorage.removeItem('claudeStudy_token');
+}
+
+// Read gist ID from URL
+function readUrlGistId() {
+  const p = new URLSearchParams(window.location.search);
+  return p.get('gist') || null;
+}
+
+function buildShareUrl(gistId) {
+  const base = window.location.href.split('?')[0];
+  return `${base}?gist=${gistId}`;
+}
+
+function pushUrlGistId(gistId) {
+  try {
+    const url = buildShareUrl(gistId);
+    window.history.replaceState({}, '', url);
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════
+// GITHUB GIST API
+// ═══════════════════════════════════════════
+const GIST_FILE = 'study-progress.json';
+
+async function ghRequest(method, path, body) {
+  const headers = {'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+  if (S.token) headers['Authorization'] = `Bearer ${S.token}`;
+  if (body) headers['Content-Type'] = 'application/json';
+  const res = await fetch(`https://api.github.com${path}`, {
+    method, headers, body: body ? JSON.stringify(body) : undefined
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
+  return json;
+}
+
+function buildGistPayload() {
+  return {
+    version: 2,
+    updatedAt: new Date().toISOString(),
+    members: S.members.map(m => ({name:m.name, completed:m.completed}))
+  };
+}
+
+function applyGistData(data) {
+  if (!data || !data.members) return;
+  data.members.forEach((m,i) => {
+    if (i < S.members.length) {
+      S.members[i].name = m.name || MCONF[i].dname;
+      S.members[i].completed = m.completed || [];
+    }
+  });
+}
+
+async function gistCreate() {
+  const data = await ghRequest('POST', '/gists', {
+    description: '클로드 코드 스터디 현황판 — 8주 스터디',
+    public: false,
+    files: {[GIST_FILE]: {content: JSON.stringify(buildGistPayload(), null, 2)}}
+  });
+  return data.id;
+}
+
+async function gistRead(id) {
+  const data = await ghRequest('GET', `/gists/${id}`);
+  const file = data.files && data.files[GIST_FILE];
+  if (!file) throw new Error('study-progress.json 파일을 찾을 수 없습니다');
+  // large gists need raw_url
+  let content = file.content;
+  if (file.truncated) {
+    const res = await fetch(file.raw_url);
+    content = await res.text();
+  }
+  return JSON.parse(content);
+}
+
+async function gistWrite() {
+  if (!S.gistId || !S.token) return;
+  await ghRequest('PATCH', `/gists/${S.gistId}`, {
+    files: {[GIST_FILE]: {content: JSON.stringify(buildGistPayload(), null, 2)}}
+  });
+}
+
+// ═══════════════════════════════════════════
+// SYNC LOGIC
+// ═══════════════════════════════════════════
+let writeDebounceTimer = null;
+
+async function syncFromGist(showToast=false) {
+  if (!S.gistId) return;
+  setSyncStatus('syncing');
+  try {
+    const data = await gistRead(S.gistId);
+    applyGistData(data);
+    saveLocal();
+    S.lastSyncTime = new Date();
+    setSyncStatus('ok');
+    renderAll();
+    if (showToast) toast('✅ 동기화 완료');
+  } catch(e) {
+    setSyncStatus('error', e.message);
+    if (showToast) toast('❌ 동기화 실패: ' + e.message);
+  }
+}
+
+function scheduleWrite() {
+  clearTimeout(writeDebounceTimer);
+  writeDebounceTimer = setTimeout(async () => {
+    if (!S.gistId || !S.token) return;
+    setSyncStatus('syncing');
+    try {
+      await gistWrite();
+      S.lastSyncTime = new Date();
+      setSyncStatus('ok');
+    } catch(e) {
+      setSyncStatus('error', e.message);
+    }
+  }, 1200);
+}
+
+function startAutoSync() {
+  if (S.syncTimer) clearInterval(S.syncTimer);
+  S.syncTimer = setInterval(() => syncFromGist(false), 30000);
+}
+
+function setSyncStatus(status, msg='') {
+  S.syncStatus = status;
+  const btn = document.getElementById('syncBtn');
+  if (!btn) return;
+  btn.className = 'sync-btn';
+  if (status === 'syncing') {
+    btn.classList.add('syncing');
+    btn.innerHTML = '<span class="spin">🔄</span> 동기화 중...';
+  } else if (status === 'ok') {
+    btn.classList.add('connected');
+    const t = S.lastSyncTime;
+    const diff = t ? Math.round((Date.now()-t)/1000) : 0;
+    const label = diff < 60 ? '방금' : Math.floor(diff/60)+'분 전';
+    btn.innerHTML = `✅ 연동됨 · ${label}`;
+  } else if (status === 'error') {
+    btn.classList.add('error');
+    btn.innerHTML = '❌ 오류 (클릭해서 재시도)';
+  } else {
+    btn.innerHTML = '☁️ GitHub 연동';
+  }
+}
+
+function onSyncClick() {
+  if (S.syncStatus === 'error' && S.gistId) {
+    syncFromGist(true);
+  } else {
+    openGhModal();
+  }
+}
+
+// ═══════════════════════════════════════════
+// GITHUB MODAL
+// ═══════════════════════════════════════════
+let ghTabVal = 'new';
+
+function openGhModal() {
+  const form = document.getElementById('ghSetupForm');
+  const success = document.getElementById('ghSuccessBox');
+  if (S.gistId && S.token) {
+    // already connected → show success box
+    form.classList.add('hidden');
+    success.classList.remove('hidden');
+    document.getElementById('shareUrlDisplay').textContent = buildShareUrl(S.gistId);
+  } else {
+    form.classList.remove('hidden');
+    success.classList.add('hidden');
+    // pre-fill token if saved
+    if (S.token) document.getElementById('ghTokenInput').value = S.token;
+  }
+  document.getElementById('ghModal').classList.remove('hidden');
+}
+
+function closeGhModal() { document.getElementById('ghModal').classList.add('hidden'); }
+
+function setGhTab(t) {
+  ghTabVal = t;
+  document.getElementById('ghTab-new').classList.toggle('active', t==='new');
+  document.getElementById('ghTab-join').classList.toggle('active', t==='join');
+  document.getElementById('ghPane-new').classList.toggle('hidden', t!=='new');
+  document.getElementById('ghPane-join').classList.toggle('hidden', t!=='join');
+}
+
+async function createGist() {
+  const token = document.getElementById('ghTokenInput').value.trim();
+  if (!token) { toast('GitHub Token을 입력해주세요'); return; }
+  const btn = document.getElementById('btnCreateGist');
+  btn.disabled = true; btn.textContent = '생성 중...';
+  saveToken(token);
+  try {
+    const id = await gistCreate();
+    saveGistId(id);
+    pushUrlGistId(id);
+    startAutoSync();
+    setSyncStatus('ok');
+    // show success
+    document.getElementById('ghSetupForm').classList.add('hidden');
+    document.getElementById('ghSuccessBox').classList.remove('hidden');
+    document.getElementById('shareUrlDisplay').textContent = buildShareUrl(id);
+    document.getElementById('setupBanner').classList.add('hidden');
+    toast('🎉 스터디 그룹이 생성되었습니다!');
+  } catch(e) {
+    toast('❌ 생성 실패: ' + e.message);
+    saveToken(null);
+  } finally {
+    btn.disabled = false; btn.textContent = '🚀 새 스터디 그룹 만들기';
+  }
+}
+
+async function joinGist() {
+  const token = document.getElementById('ghTokenInput').value.trim();
+  const raw = document.getElementById('ghGistInput').value.trim();
+  if (!raw) { toast('Gist ID 또는 URL을 입력해주세요'); return; }
+  // extract gist id from url or raw id
+  let id = raw;
+  const m = raw.match(/[?&]gist=([a-f0-9]+)/i) || raw.match(/gists\/([a-f0-9]+)/i) || raw.match(/^([a-f0-9]{20,})$/i);
+  if (m) id = m[1];
+  const btn = document.getElementById('btnJoinGist');
+  btn.disabled = true; btn.textContent = '참여 중...';
+  if (token) saveToken(token);
+  try {
+    const data = await gistRead(id);
+    applyGistData(data);
+    saveGistId(id);
+    saveLocal();
+    pushUrlGistId(id);
+    startAutoSync();
+    setSyncStatus('ok');
+    S.lastSyncTime = new Date();
+    renderAll();
+    document.getElementById('ghSetupForm').classList.add('hidden');
+    document.getElementById('ghSuccessBox').classList.remove('hidden');
+    document.getElementById('shareUrlDisplay').textContent = buildShareUrl(id);
+    document.getElementById('setupBanner').classList.add('hidden');
+    toast('✅ 스터디 그룹에 참여했습니다!');
+  } catch(e) {
+    toast('❌ 참여 실패: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '📥 그룹 참여하기';
+  }
+}
+
+function disconnectGh() {
+  if (!confirm('GitHub 연동을 해제하면 실시간 공유가 중단됩니다. 계속할까요?')) return;
+  saveToken(null);
+  S.gistId = null;
+  localStorage.removeItem('claudeStudy_gistId');
+  if (S.syncTimer) clearInterval(S.syncTimer);
+  setSyncStatus('idle');
+  closeGhModal();
+  document.getElementById('setupBanner').classList.remove('hidden');
+  toast('연동이 해제되었습니다');
+}
+
+function copyShareUrl() {
+  const url = buildShareUrl(S.gistId);
+  navigator.clipboard.writeText(url).then(() => toast('🔗 URL 복사 완료! 팀원에게 공유하세요')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = url; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    toast('🔗 URL 복사 완료!');
+  });
+}
+
+// ═══════════════════════════════════════════
+// VIEW SWITCHING
+// ═══════════════════════════════════════════
+let curView = 'dash';
+function switchView(v) {
+  curView = v;
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(`view-${v}`).classList.add('active');
+  document.getElementById(`tab-${v}`).classList.add('active');
+  if (v === 'cur') renderCurriculum(S.curViewMember);
+}
+
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+function getProgress(i) { const done=S.members[i].completed.length; return {done,total:TOTAL,pct:Math.round(done/TOTAL*100)}; }
+function getCurrentWeek(i) {
+  const comp=new Set(S.members[i].completed);
+  for(let w=0;w<WEEKS.length;w++){
+    const all=[...WEEKS[w].sections.map(x=>x.id),...WEEKS[w].missions.map(x=>x.id)];
+    if(!all.every(id=>comp.has(id))) return w+1;
+  }
+  return 8;
+}
+function getWeekProgress(i,wi) {
+  const w=WEEKS[wi],comp=new Set(S.members[i].completed);
+  const all=[...w.sections.map(x=>x.id),...w.missions.map(x=>x.id)];
+  const done=all.filter(id=>comp.has(id)).length;
+  return {done,total:all.length,pct:all.length?Math.round(done/all.length*100):0};
+}
+
+// ═══════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════
+function renderAll() { renderDashboard(); if(curView==='cur') renderCurriculum(S.curViewMember); }
+
+function renderDashboard() {
+  renderMemberCards(); renderRanking();
+  const avg = Math.round(S.members.reduce((s,_,i)=>s+getProgress(i).pct,0)/S.members.length);
+  document.getElementById('statAvg').textContent = avg+'%';
+}
+
+function renderMemberCards() {
+  document.getElementById('membersGrid').innerHTML = S.members.map((m,i) => {
+    const cfg=MCONF[i], p=getProgress(i), wk=getCurrentWeek(i), isMe=S.me===i;
+    const mini=WEEKS.map((_,wi)=>{const wp=getWeekProgress(i,wi);return`<div class="wk-mini-bar"><div class="wk-mini-fill" style="width:${wp.pct}%;background:${WEEKS[wi].color}"></div></div>`;}).join('');
+    return `<div class="mc${isMe?' is-me':''}" style="--c:${cfg.color};--l:${cfg.light}" onclick="goToCurriculum(${i})">
+      <div class="mc-avatar" style="background:${cfg.light}">${cfg.emoji}</div>
+      <div class="mc-name-row"><div class="mc-name">${m.name}</div>${isMe?`<div class="me-chip">나</div>`:''}</div>
+      <div class="mc-week">${wk}주차 진행 중</div>
+      <div class="pbar"><div class="pbar-fill" style="width:${p.pct}%;background:${cfg.color}"></div></div>
+      <div class="pmeta"><div class="ppct" style="color:${cfg.color}">${p.pct}%</div><div class="pcnt">${p.done}/${p.total}</div></div>
+      <div class="wk-mini">${mini}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderRanking() {
+  const medals=['🥇','🥈','🥉','4️⃣','5️⃣'];
+  const sorted=[...S.members].map((m,i)=>({...m,idx:i,p:getProgress(i)})).sort((a,b)=>b.p.pct-a.p.pct);
+  document.getElementById('rankList').innerHTML = sorted.map((m,rank)=>{
+    const cfg=MCONF[m.idx], rc=rank===0?'r1':rank===1?'r2':rank===2?'r3':'';
+    return `<div class="rank-item" onclick="goToCurriculum(${m.idx})">
+      <div class="rank-num ${rc}">${medals[rank]}</div>
+      <div class="rank-avatar" style="background:${cfg.light}">${cfg.emoji}</div>
+      <div class="rank-info">
+        <div class="rank-name">${m.name}${S.me===m.idx?`<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:${cfg.color};color:#fff;font-weight:700">나</span>`:''}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar"><div class="rank-bar-fill" style="width:${m.p.pct}%;background:${cfg.color}"></div></div><div class="rank-sec">${m.p.done}/${m.p.total}항목</div></div>
+      </div>
+      <div class="rank-pct" style="color:${cfg.color}">${m.p.pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+function goToCurriculum(i) { S.curViewMember=i; switchView('cur'); }
+
+// ═══════════════════════════════════════════
+// CURRICULUM
+// ═══════════════════════════════════════════
+function renderCurriculum(idx) {
+  S.curViewMember=idx;
+  const m=S.members[idx], cfg=MCONF[idx], isMe=S.me===idx;
+  document.getElementById('curTitle').textContent = m.name+'의 학습 기록';
+  document.getElementById('curSub').textContent = isMe ? '✏️ 체크박스를 클릭해서 완료된 항목을 표시하세요' : '👀 '+m.name+'의 학습 진도를 보고 있습니다';
+  document.getElementById('memberTabs').innerHTML = S.members.map((mb,i)=>{
+    const c=MCONF[i];
+    return `<div class="mtab${i===idx?' active':''}" style="--c:${c.color};--l:${c.light}" onclick="renderCurriculum(${i})">${c.emoji} ${mb.name}</div>`;
+  }).join('');
+  const comp=new Set(m.completed);
+  document.getElementById('weekList').innerHTML = WEEKS.map((w,wi)=>{
+    const wp=getWeekProgress(idx,wi);
+    const isDone=wp.done===wp.total&&wp.total>0;
+    const secRows=w.sections.map(s=>{
+      const done=comp.has(s.id);
+      return `<div class="irow${done?' done':''}${!isMe?' readonly':''}" data-id="${s.id}" data-midx="${idx}" onclick="${isMe?'toggleItem(this)':''}">
+        <div class="chk${done?(isMe?' on':' readonly-on'):''}"></div>
+        <div class="ichip csec">섹션 ${s.n}</div>
+        <div class="ilabel">${s.t}${s.d?`<span style="color:#9CA3AF;font-size:11px"> · ${s.d}</span>`:''}${s.star?'&nbsp;⭐':''}</div>
+        <div class="imeta"><span class="itime">${s.time||''}</span></div>
+      </div>`;
+    }).join('');
+    const misRows=w.missions.map(ms=>{
+      const done=comp.has(ms.id);
+      return `<div class="irow${done?' done':''}${!isMe?' readonly':''}" data-id="${ms.id}" data-midx="${idx}" onclick="${isMe?'toggleItem(this)':''}">
+        <div class="chk${done?(isMe?' on':' readonly-on'):''}"></div>
+        <div class="ichip cmis">미션 ${ms.n}</div>
+        <div class="ilabel">${ms.t}${ms.star?'&nbsp;⭐':''}</div>
+        <div class="imeta"></div>
+      </div>`;
+    }).join('');
+    return `<div class="wcard${wi===0?' open':''}" id="wk-${wi}">
+      <div class="wcard-hdr" onclick="toggleWeek(${wi})">
+        <div class="wcard-num" style="background:${w.light};color:${w.color}">${wi+1}주차</div>
+        <div class="wcard-meta"><div class="wcard-title">${w.title}</div><div class="wcard-sub">${w.goal}</div></div>
+        <div class="wcard-right"><div class="wcard-done" style="color:${wp.done>0?w.color:'#9CA3AF'}">${wp.done}/${wp.total}</div><div class="wcard-time">${w.hours}</div></div>
+        <div class="wcard-chevron">▼</div>
+      </div>
+      <div class="wcard-strip"><div class="wcard-strip-fill" style="width:${wp.pct}%;background:${w.color}"></div></div>
+      <div class="wcard-body">
+        <div class="item-grp-lbl">강의 섹션</div>${secRows}
+        <div class="item-grp-lbl">미션</div>${misRows}
+        ${w.tip?`<div class="dtip">🎨 디자이너 포인트 · ${w.tip}</div>`:''}
+        ${isDone?`<div class="result-chip">🎉 ${w.result} 완료!</div>`:`<div style="padding:4px 20px 6px;font-size:12px;color:#9CA3AF">이번 주 결과물: ${w.result}</div>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleWeek(wi) { document.getElementById(`wk-${wi}`).classList.toggle('open'); }
+
+function toggleItem(row) {
+  if (S.me===null) { openMemberModal(); return; }
+  const id=row.dataset.id, midx=parseInt(row.dataset.midx);
+  if (midx!==S.me) { toast('본인 슬롯의 항목만 체크할 수 있어요'); return; }
+  const comp=S.members[midx].completed;
+  const idx=comp.indexOf(id);
+  if(idx===-1) comp.push(id); else comp.splice(idx,1);
+  saveLocal();
+  scheduleWrite();
+  renderDashboard();
+  renderCurriculum(midx);
+}
+
+// ═══════════════════════════════════════════
+// MEMBER MODAL
+// ═══════════════════════════════════════════
+function openMemberModal() {
+  document.getElementById('memberChoiceList').innerHTML = S.members.map((m,i)=>{
+    const cfg=MCONF[i], p=getProgress(i), isMe=S.me===i;
+    return `<div class="member-choice" style="--c:${cfg.color};--l:${cfg.light}" onclick="selectMember(${i},event)">
+      <div class="choice-avatar" style="background:${cfg.light}">${cfg.emoji}</div>
+      <div class="choice-info">
+        <div class="choice-name-wrap">
+          <input class="edit-name" value="${m.name}" onclick="event.stopPropagation()" onblur="saveName(${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()" placeholder="이름 입력">
+          ${isMe?`<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:${cfg.color};color:#fff;font-weight:700">현재 나</span>`:''}
+        </div>
+        <div class="choice-prog">${p.pct}% 완료 · ${p.done}/${p.total}항목</div>
+      </div>
+      <div style="color:#D1D5DB;font-size:18px">›</div>
+    </div>`;
+  }).join('');
+  document.getElementById('memberModal').classList.remove('hidden');
+}
+
+function closeMemberModal() { document.getElementById('memberModal').classList.add('hidden'); }
+
+function selectMember(i, event) {
+  if (event.target.tagName==='INPUT') return;
+  S.me=i; saveLocal();
+  scheduleWrite();
+  updateHeaderMember(); closeMemberModal(); renderAll();
+  toast(`${S.members[i].name}으로 로그인했습니다`);
+}
+
+function saveName(i, val) {
+  const name=val.trim()||MCONF[i].dname;
+  S.members[i].name=name; saveLocal();
+  scheduleWrite();
+  renderAll(); updateHeaderMember();
+}
+
+function updateHeaderMember() {
+  if (S.me===null) { document.getElementById('hdrEmoji').textContent='👤'; document.getElementById('hdrName').textContent='멤버 선택'; return; }
+  document.getElementById('hdrEmoji').textContent=MCONF[S.me].emoji;
+  document.getElementById('hdrName').textContent=S.members[S.me].name;
+}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+async function init() {
+  loadLocal();
+  // Check URL for gist ID (takes priority)
+  const urlGistId = readUrlGistId();
+  if (urlGistId && urlGistId !== S.gistId) {
+    saveGistId(urlGistId);
+  }
+  updateHeaderMember();
+  renderDashboard();
+
+  // Show setup banner only if not connected
+  if (!S.gistId) {
+    document.getElementById('setupBanner').classList.remove('hidden');
+  }
+
+  // If gist connected, sync immediately
+  if (S.gistId) {
+    await syncFromGist(false);
+    startAutoSync();
+    // restore sync status
+    if (S.syncStatus !== 'error') {
+      setSyncStatus('ok');
+      S.lastSyncTime = new Date();
+    }
+  }
+}
+
+init();
+</script>
+</body>
+</html>
