@@ -545,7 +545,12 @@ async function syncFromGist(showToast=false) {
 function scheduleWrite() {
   clearTimeout(writeDebounceTimer);
   writeDebounceTimer = setTimeout(async () => {
-    if (!S.gistId || !S.token) return;
+    if (!S.gistId) return;
+    if (!S.token) {
+      toast('⚠️ GitHub 토큰이 없어 저장이 안 됩니다 — 우측 상단 "GitHub 연동" 버튼을 눌러 토큰을 입력해주세요');
+      setSyncStatus('error', '토큰 없음');
+      return;
+    }
     setSyncStatus('syncing');
     try {
       await gistWrite();
@@ -553,6 +558,7 @@ function scheduleWrite() {
       setSyncStatus('ok');
     } catch(e) {
       setSyncStatus('error', e.message);
+      toast('❌ 저장 실패: ' + e.message);
     }
   }, 1200);
 }
